@@ -1,22 +1,30 @@
-package com.example.homelab1
+package com.example.homelab1.view
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.homelab1.ui.theme.HomeLab1Theme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
+import com.example.homelab1.viewmodel.MainViewModel
+import androidx.compose.material3.Button
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import com.example.homelab1.BuildConfig
+
 class MainActivity : ComponentActivity() {
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -24,10 +32,11 @@ class MainActivity : ComponentActivity() {
             HomeLab1Theme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Greeting(
-                        name = "Android",
+                        name = ":(",
                         modifier = Modifier.padding(innerPadding)
                     )
                     TokenDisplayScreen()
+                    DataScreen(viewModel = viewModel)
                 }
             }
         }
@@ -59,10 +68,24 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
     )
 }
 
-@Preview(showBackground = true)
+//@Preview(showBackground = true)
+//@Composable
+//fun GreetingPreview() {
+//    HomeLab1Theme {
+//        Greeting("Android")
+//    }
+//}
+
 @Composable
-fun GreetingPreview() {
-    HomeLab1Theme {
-        Greeting("Android")
+fun DataScreen(viewModel: MainViewModel) {
+    val textState by viewModel.uiState.collectAsState()
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Button(onClick = { viewModel.loadData() }) {
+            Text(text = textState)
+        }
     }
 }
