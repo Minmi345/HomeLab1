@@ -14,10 +14,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _uiState = MutableStateFlow("Click to get info")
     val uiState: StateFlow<String> = _uiState
 
-    fun loadData() {
+    fun loadMockData() {
         viewModelScope.launch {
             val result = networkClient.fetchAndParseConfig()
             _uiState.value = result
+        }
+    }
+
+    fun loadData() {
+        viewModelScope.launch {
+            try{
+            val result = networkClient.fetchGitHubComments(
+                owner = "Minmi345",
+                repo = "cool_IoT_Simulator",
+                prNumber = 2
+            )
+            _uiState.value = result}
+            catch (e: Exception) {
+                _uiState.value = "UI ERROR: ${e.localizedMessage}"
+            }
+
         }
     }
 }
