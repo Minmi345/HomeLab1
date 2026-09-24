@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -18,9 +19,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.unit.dp
 import com.example.homelab1.viewmodel.MainViewModel
 import androidx.compose.material3.Button
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Color
 import com.example.homelab1.BuildConfig
+import com.example.homelab1.ui.CommentUiState
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -31,12 +35,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             HomeLab1Theme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = ":(",
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                    TokenDisplayScreen()
-                    DataScreen(viewModel = viewModel)
+                   // TokenDisplayScreen()
+                    DataScreen(viewModel = viewModel,
+                        modifier = Modifier.padding(innerPadding))
                 }
             }
         }
@@ -68,24 +69,33 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
     )
 }
 
-//@Preview(showBackground = true)
-//@Composable
-//fun GreetingPreview() {
-//    HomeLab1Theme {
-//        Greeting("Android")
-//    }
-//}
 
 @Composable
-fun DataScreen(viewModel: MainViewModel) {
+fun DataScreen(viewModel: MainViewModel,
+               modifier: Modifier = Modifier) {
     val textState by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.startPolling()
+    }
+    val backgroundColor = when (textState) {
+        is CommentUiState.Loading -> Color(0x606052EE)
+        is CommentUiState.Safe -> Color(0xFF2E7D32)      // Green
+        is CommentUiState.Suspicious -> Color(0xFFC62828) // Red
+    }
+
+    val displayText = when (val state = textState) {
+        is CommentUiState.Loading -> "Loading GitHub comments..."
+        is CommentUiState.Safe -> state.text
+        is CommentUiState.Suspicious -> "ALERT (Suspicious): ${state.text}"
+    }
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .background(backgroundColor),
         contentAlignment = Alignment.Center
     ) {
-        Button(onClick = { viewModel.loadData() }) {
-            Text(text = textState)
-        }
+        Text(text = displayText,
+            color = Color.White)
     }
 }
