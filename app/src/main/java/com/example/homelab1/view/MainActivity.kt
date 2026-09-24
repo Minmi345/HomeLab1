@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import com.example.homelab1.BuildConfig
 import com.example.homelab1.ui.CommentUiState
 
@@ -96,6 +97,8 @@ fun DataScreen(viewModel: MainViewModel,
         contentAlignment = Alignment.Center
     ) {
         Text(text = displayText,
-            color = Color.White)
+            color = Color.White,
+            textAlign = TextAlign.Center, // Centers multiline text alignment
+            modifier = Modifier.padding(20.dp))
     }
 }

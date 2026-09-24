@@ -10,7 +10,17 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.Path
+import retrofit2.http.Query
+
 interface GitHubApiService {
+    @GET("repos/{owner}/{repo}/pulls")
+    suspend fun getPullRequests(
+        @Header("Authorization") authorization: String,
+        @Header("Accept") accept: String = "application/vnd.github+json",
+        @Path("owner") owner: String,
+        @Path("repo") repo: String,
+        @Query("state") state: String = "open"
+    ): List<GitHubPullRequest>
     @GET("repos/{owner}/{repo}/issues/{issue_number}/comments")
     suspend fun getComments(
         @Header("Authorization") authorization: String,
@@ -22,6 +32,7 @@ interface GitHubApiService {
 }
 class NetworkClient (private val context: Context) {
     private val gson = Gson()
+
     suspend fun fetchData(): String {
         return withContext(Dispatchers.IO) {
             // Simulated network fetch
@@ -55,28 +66,39 @@ class NetworkClient (private val context: Context) {
             .create(GitHubApiService::class.java)
     }
 
-    suspend fun fetchGitHubComments(owner: String, repo: String, prNumber: Int): String {
-        val fullUrl = "https://api.github.com/repos/$owner/$repo/issues/$prNumber/comments"
-        return try {
-            val token = BuildConfig.GITHUB_TOKEN
-            val authHeader = "Bearer $token"
+    suspend fun fetchLatestCommentFromLatestPr(owner: String, repo: String): String? {
+        val token = BuildConfig.GITHUB_TOKEN
+        val authHeader = "Bearer $token"
 
-            val comments = api.getComments(
-                authorization = authHeader,
-                owner = owner,
-                repo = repo,
-                issueNumber = prNumber
-            )
+        // 1. Fetch open PRs
+        val openPrs = api.getPullRequests(
+            authorization = authHeader,
+            owner = owner,
+            repo = repo,
+            state = "open"
+        )
 
-            if (comments.isNotEmpty()) {
-                val latest = comments.last()
-                "Fetched ${comments.size} comments! Latest by ${latest.user.username}: \"${latest.body}\""
-            } else {
-                "No comments found on PR #$prNumber"
-            }
-        } catch (e: Exception) {
-            "ERROR [${e.javaClass.simpleName}]: ${e.localizedMessage}; url:$fullUrl"
+        if (openPrs.isEmpty()) {
+            return null // No open PRs
         }
+
+        // GitHub returns PRs in descending order of creation by default
+        val latestPr = openPrs.first()
+
+        // 2. Fetch comments for the latest open PR
+        val comments = api.getComments(
+            authorization = authHeader,
+            owner = owner,
+            repo = repo,
+            issueNumber = latestPr.number
+        )
+
+        if (comments.isEmpty()) {
+            return null // Open PR exists, but has no comments
+        }
+
+        // 3. Return the body of the last comment
+        return comments.last().body
     }
 
 

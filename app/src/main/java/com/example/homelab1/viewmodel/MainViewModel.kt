@@ -3,13 +3,16 @@ package com.example.homelab1.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.homelab1.model.DeceptionDetector
 import com.example.homelab1.model.NetworkClient
 import com.example.homelab1.ui.CommentUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable.isActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import kotlin.time.Duration.Companion.seconds
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
@@ -24,54 +27,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun loadData() {
-        viewModelScope.launch {
-            try{
-                val result = networkClient.fetchGitHubComments(
-                    owner = "Minmi345",
-                    repo = "cool_IoT_Simulator",
-                    prNumber = 2
-                )
-                 if (isSuspicious(result)) {
-                        _uiState.value = CommentUiState.Suspicious(result)
-                    }
-                 else {
-                        _uiState.value = CommentUiState.Safe(result)
-                    }
-            }
-            catch (e: Exception) {
-                    _uiState.value = CommentUiState.Suspicious("UI ERROR: ${e.localizedMessage}")
-            }
-        }
-    }
-
     fun startPolling(){
-      //  while (true) {
-        viewModelScope.launch {
+       // var cooked = 0
+        viewModelScope.launch(Dispatchers.IO) {
+            while (true) {
+                //cooked++
             try {
-                val result = networkClient.fetchGitHubComments(
+                val result = networkClient.fetchLatestCommentFromLatestPr(
                     owner = "Minmi345",
-                    repo = "cool_IoT_Simulator",
-                    prNumber = 2
+                    repo = "cool_IoT_Simulator"
                 )
-
-                if (isSuspicious(result)) {
-                    _uiState.value = CommentUiState.Suspicious(result)
+                if (result == null) {
+                    // No open PR or no comments -> Safe / Normal State[cite: 1]
+                    _uiState.value = CommentUiState.Safe("No active attack comments found.")
+                    continue
+                }
+                val sus = DeceptionDetector.isSuspicious(result).roundToInt()
+                if (sus<70) {
+                    val unsus = 100-sus
+                    _uiState.value = CommentUiState.Suspicious("$result \n\n\n Confidence score: $unsus%")
+                    //$cooked
                 } else {
-                    _uiState.value = CommentUiState.Safe(result)
+                    _uiState.value = CommentUiState.Safe("$result \n\n\n Confidence score: $sus%")
                 }
 
             } catch (e: Exception) {
                 _uiState.value = CommentUiState.Suspicious("UI ERROR: ${e.localizedMessage}")
             }
-            delay(100.seconds)
-
-        //}
+            delay(30.seconds)
         }
-    }
-
-    private fun isSuspicious(text: String): Boolean {
-        return text.contains("\'")
+        }
     }
 }
 

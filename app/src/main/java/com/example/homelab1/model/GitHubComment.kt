@@ -18,3 +18,8 @@ data class GitHubUser(
     @SerializedName("login")
     val username: String
 )
+
+data class GitHubPullRequest(
+    val number: Int,
+    val title: String
+)
